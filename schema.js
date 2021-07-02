@@ -5,8 +5,9 @@ const typeDefs = gql`
     briefId: ID!
     text: String!
     images: [String!]!
-    author: String!
-    comments: [String!]!
+    author: User!
+    childBriefs: [String!]!
+    parentBrief: Brief
     dateCreated: String!
     dateUpdated: String!
   }
@@ -15,13 +16,19 @@ const typeDefs = gql`
     email: String!
     picture: String
     userId: ID!
+    briefs: [Brief!]!
+    signupDate: String!
   }
   type Query {
     briefs: [Brief!]!
+    brief(id: ID!): Brief!
     users: [User!]!
+    user(id: ID!): User!
+    me: User!
   }
   type Mutation {
     newBrief(text: String!, images: [String!]): Brief!
+    deleteBrief(id: ID!): Boolean!
     signUp(
       username: String!
       email: String!

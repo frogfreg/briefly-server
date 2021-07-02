@@ -19,7 +19,9 @@ const resolvers = {
     },
     users: async (parent, args, context) => {
       try {
-        const queryResult = await db.query("SELECT * FROM users");
+        const queryResult = await db.query(
+          `SELECT username, email, picture, "signupDate", "userId" FROM users`
+        );
         return queryResult.rows;
       } catch (err) {
         throw new Error(err);
@@ -38,6 +40,24 @@ const resolvers = {
           "INSERT INTO briefs VALUES($1, $2, $3)",
           [briefId, args.text, context.userId]
         );
+
+        if (args.images && args.images.length > 0) {
+          try {
+            const promises = [];
+
+            args.images.forEach((imageUrl) => {
+              const promise = db.query("INSERT INTO images VALUES($1, $2)", [
+                briefId,
+                imageUrl,
+              ]);
+              promises.push(promise);
+            });
+
+            await Promise.all(promises);
+          } catch (err) {
+            throw new Error(err);
+          }
+        }
 
         if (queryResult.rowCount === 0) {
           throw new Error("The brief was not created");
@@ -84,6 +104,66 @@ const resolvers = {
         return token;
       } catch (err) {
         throw new Error(err.detail);
+      }
+    },
+    deleteBrief: async (parent, { id }, context) => {
+      try {
+        const queryResult = await db.query(
+          'DELETE FROM briefs WHERE "briefId" = $1',
+          [id]
+        );
+
+        if (queryResult.rowCount === 0) {
+          return false;
+        }
+
+        return true;
+      } catch (err) {
+        throw new Error(err);
+      }
+    },
+  },
+  Brief: {
+    author: async (parent, args, context) => {
+      try {
+        const queryResult = await db.query(
+          `SELECT * FROM users WHERE "userId" = $1`,
+          [parent.authorId]
+        );
+
+        return queryResult.rows[0];
+      } catch (err) {
+        throw new Error(err);
+      }
+    },
+    images: async (parent, args, context) => {
+      try {
+        const queryResult = await db.query(
+          `SELECT "imageUrl" FROM images WHERE "briefId" = $1`,
+          [parent.briefId]
+        );
+
+        return queryResult.rows.map((row) => {
+          return row.imageUrl;
+        });
+      } catch (err) {
+        throw new Error(err);
+      }
+    },
+  },
+  User: {
+    briefs: async (parent, args, context) => {
+      console.dir(parent);
+      console.trace();
+      try {
+        const queryResult = await db.query(
+          `SELECT * FROM briefs WHERE "authorId" = $1`,
+          [parent.userId]
+        );
+
+        return queryResult.rows;
+      } catch (err) {
+        throw new Error(err);
       }
     },
   },
