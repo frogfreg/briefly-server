@@ -37,6 +37,7 @@ const typeDefs = gql`
       showAge: Boolean
       password: String!
     ): String!
+    signIn(username: String, email: String, password: String!): String!
   }
 `;
 

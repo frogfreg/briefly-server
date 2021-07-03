@@ -122,6 +122,35 @@ const resolvers = {
         throw new Error(err);
       }
     },
+    signIn: async (parent, { username, email, password }, context) => {
+      if (!username && !email) {
+        throw new Error("You must provide email or username to log in!");
+      }
+      try {
+        const userCheckQuery = await db.query(
+          `SELECT username, password, "userId" FROM users WHERE username = $1 OR email = $2`,
+          [username, email]
+        );
+        if (userCheckQuery.rowCount === 0) {
+          throw new Error("User not found. Check username or email");
+        }
+
+        const { password: hashedPassword, userId } = userCheckQuery.rows[0];
+
+        if (bcrypt.compareSync(password, hashedPassword)) {
+          const token = jwt.sign(
+            { userId },
+            process.env.SECRET_KEY || "thisisasecret"
+          );
+
+          return token;
+        } else {
+          throw new Error("Wrong password");
+        }
+      } catch (err) {
+        throw new Error(err);
+      }
+    },
   },
   Brief: {
     author: async (parent, args, context) => {
