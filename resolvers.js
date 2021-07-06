@@ -19,10 +19,58 @@ const resolvers = {
     },
     users: async (parent, args, context) => {
       try {
-        const queryResult = await db.query(
-          `SELECT username, email, picture, "signupDate", "userId" FROM users`
-        );
+        const queryResult = await db.query(`SELECT * FROM users`);
         return queryResult.rows;
+      } catch (err) {
+        throw new Error(err);
+      }
+    },
+    me: async (parent, args, context) => {
+      //TODO: extract userId from jwt, validate in db and return user info
+
+      if (!context.userId || context.userId === "1") {
+        throw new Error("You must be logged in to see this info!");
+      }
+
+      try {
+        const queryResult = await db.query(
+          `SELECT * FROM users WHERE "userId" = $1`,
+          ["1"]
+        );
+
+        return queryResult.rows[0];
+      } catch (err) {
+        throw new Error(err);
+      }
+    },
+    brief: async (parent, { id }, context) => {
+      try {
+        const queryResult = await db.query(
+          `SELECT * FROM briefs WHERE "briefId" = $1`,
+          [id]
+        );
+
+        if (queryResult.rowCount === 0) {
+          throw new Error("Brief was not found");
+        }
+
+        return queryResult.rows[0];
+      } catch (err) {
+        throw new Error(err);
+      }
+    },
+    user: async (parent, { id }, context) => {
+      try {
+        const queryResult = await db.query(
+          `SELECT * FROM users WHERE "userId" = $1`,
+          [id]
+        );
+
+        if (queryResult.rowCount === 0) {
+          throw new Error("User was not found");
+        }
+
+        return queryResult.rows[0];
       } catch (err) {
         throw new Error(err);
       }
@@ -182,8 +230,6 @@ const resolvers = {
   },
   User: {
     briefs: async (parent, args, context) => {
-      console.dir(parent);
-      console.trace();
       try {
         const queryResult = await db.query(
           `SELECT * FROM briefs WHERE "authorId" = $1`,
