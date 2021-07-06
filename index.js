@@ -1,4 +1,5 @@
 const { ApolloServer } = require("apollo-server");
+const jwt = require("jsonwebtoken");
 
 const typeDefs = require("./schema.js");
 const resolvers = require("./resolvers.js");
@@ -7,8 +8,21 @@ const server = new ApolloServer({
   typeDefs,
   resolvers,
   context: ({ req }) => {
-    const userId = (req.headers && req.headers.authorization) || "1";
-    return { userId };
+    let token = {};
+    if (req.headers && req.headers.authorization) {
+      try {
+        token = jwt.verify(
+          req.headers.authorization.replace("Bearer ", ""),
+          process.env.SECRET_KEY || "thisisasecret"
+        );
+      } catch (err) {
+        throw new Error(err);
+      }
+    } else {
+      token.userId = "1";
+    }
+
+    return { userId: token.userId };
   },
 });
 

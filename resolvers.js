@@ -25,17 +25,17 @@ const resolvers = {
         throw new Error(err);
       }
     },
-    me: async (parent, args, context) => {
+    loggedInUser: async (parent, args, context) => {
       //TODO: extract userId from jwt, validate in db and return user info
 
-      if (!context.userId || context.userId === "1") {
+      if (!context.userId) {
         throw new Error("You must be logged in to see this info!");
       }
 
       try {
         const queryResult = await db.query(
           `SELECT * FROM users WHERE "userId" = $1`,
-          ["1"]
+          [context.userId]
         );
 
         return queryResult.rows[0];
