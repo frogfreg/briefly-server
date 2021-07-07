@@ -1,3 +1,4 @@
+// TODO: Add and modify queries and mutations to support favorites, parents and childrens 
 const db = require("./database/db.js");
 const { v4: uuidv4 } = require("uuid");
 const bcrypt = require("bcrypt");

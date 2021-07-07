@@ -1,3 +1,4 @@
+// TODO: Add support for favorites
 const { gql } = require("apollo-server");
 
 const typeDefs = gql`
