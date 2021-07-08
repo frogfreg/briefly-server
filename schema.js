@@ -11,6 +11,8 @@ const typeDefs = gql`
     parentBrief: Brief
     dateCreated: String!
     dateUpdated: String!
+    favoriteOf: [User!]!
+    favoriteCount: Int!
   }
   type User {
     username: String!
@@ -19,6 +21,7 @@ const typeDefs = gql`
     userId: ID!
     briefs: [Brief!]!
     signupDate: String!
+    favorites: [Brief!]!
   }
   type Query {
     briefs: [Brief!]!
@@ -28,7 +31,7 @@ const typeDefs = gql`
     loggedInUser: User!
   }
   type Mutation {
-    newBrief(text: String!, images: [String!]): Brief!
+    newBrief(text: String!, images: [String!], parent: ID): Brief!
     deleteBrief(id: ID!): Boolean!
     signUp(
       username: String!
@@ -39,6 +42,7 @@ const typeDefs = gql`
       password: String!
     ): String!
     signIn(username: String, email: String, password: String!): String!
+    toggleFavorite(id: ID!): Boolean!
   }
 `;
 

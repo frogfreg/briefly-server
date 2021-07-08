@@ -1,4 +1,4 @@
-// TODO: Add and modify queries and mutations to support favorites, parents and childrens 
+// TODO: Add and modify queries and mutations to support favorites, parents and childrens
 const db = require("./database/db.js");
 const { v4: uuidv4 } = require("uuid");
 const bcrypt = require("bcrypt");
@@ -200,6 +200,33 @@ const resolvers = {
         throw new Error(err);
       }
     },
+    toggleFavorite: async (parent, { id }, context) => {
+      if (!context.userId) {
+        throw new Error("You must be logged in to fav a brief");
+      }
+      try {
+        const queryResult = await db.query(
+          `SELECT * FROM favorites WHERE "briefId" = $1 AND "userId" = $2`,
+          [id, context.userId]
+        );
+
+        if (queryResult.rowCount === 0) {
+          await db.query("INSERT INTO favorites VALUES($1, $2)", [
+            context.userId,
+            id,
+          ]);
+          return true;
+        } else {
+          await db.query(
+            `DELETE FROM favorites WHERE "userId" = $1 AND "briefId" = $2`,
+            [context.userId, id]
+          );
+          return false;
+        }
+      } catch (err) {
+        throw new Error(err);
+      }
+    },
   },
   Brief: {
     author: async (parent, args, context) => {
@@ -228,12 +255,48 @@ const resolvers = {
         throw new Error(err);
       }
     },
+    favoriteOf: async (parent, args, context) => {
+      try {
+        const queryResult = await db.query(
+          `SELECT users.* FROM favorites JOIN users ON favorites."userId" = users."userId" WHERE favorites."briefId" = $1`,
+          [parent.briefId]
+        );
+
+        return queryResult.rows;
+      } catch (err) {
+        throw new Error(err);
+      }
+    },
+    favoriteCount: async (parent, args, context) => {
+      try {
+        const queryResult = await db.query(
+          `SELECT COUNT(*) FROM favorites WHERE "briefId" = $1`,
+          [parent.briefId]
+        );
+
+        return queryResult.rows[0].count;
+      } catch (err) {
+        throw new Error(err);
+      }
+    },
   },
   User: {
     briefs: async (parent, args, context) => {
       try {
         const queryResult = await db.query(
           `SELECT * FROM briefs WHERE "authorId" = $1`,
+          [parent.userId]
+        );
+
+        return queryResult.rows;
+      } catch (err) {
+        throw new Error(err);
+      }
+    },
+    favorites: async (parent, args, context) => {
+      try {
+        const queryResult = await db.query(
+          `SELECT briefs.* FROM briefs JOIN favorites ON favorites."briefId" = briefs."briefId" WHERE favorites."userId" = $1`,
           [parent.userId]
         );
 
