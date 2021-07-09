@@ -1,4 +1,5 @@
-// TODO: Add and modify queries and mutations to support favorites, parents and childrens
+//TODO: Update deleteBrief mutation to deal with deleted parents
+
 const db = require("./database/db.js");
 const { v4: uuidv4 } = require("uuid");
 const bcrypt = require("bcrypt");
@@ -79,16 +80,21 @@ const resolvers = {
   },
   Mutation: {
     newBrief: async (parent, args, context) => {
-      //TODO: check if context is sending correct user, check if user exists, add nested queries, deal with images
-      const briefId = uuidv4();
       if (!context.userId) {
         throw new Error("You must be logged in to create a new Brief!");
       }
+      const briefId = uuidv4();
       try {
         const queryResult = await db.query(
           "INSERT INTO briefs VALUES($1, $2, $3)",
           [briefId, args.text, context.userId]
         );
+        if (args.parent) {
+          await db.query("INSERT INTO threads VALUES($1, $2)", [
+            args.parent,
+            briefId,
+          ]);
+        }
 
         if (args.images && args.images.length > 0) {
           try {
@@ -275,6 +281,38 @@ const resolvers = {
         );
 
         return queryResult.rows[0].count;
+      } catch (err) {
+        throw new Error(err);
+      }
+    },
+    parentBrief: async (parent, args, context) => {
+      try {
+        const queryResult = await db.query(
+          `SELECT briefs.* FROM threads JOIN briefs ON threads."parentId" = briefs."briefId" WHERE threads."childrenId" = $1`,
+          [parent.briefId]
+        );
+
+        if (queryResult.rowCount === 0) {
+          return null;
+        } else {
+          return queryResult.rows[0];
+        }
+      } catch (err) {
+        throw new Error(err);
+      }
+    },
+    childBriefs: async (parent, args, context) => {
+      try {
+        const queryResult = await db.query(
+          `SELECT briefs.* FROM threads JOIN briefs ON threads."childrenId" = briefs."briefId" WHERE threads."parentId" = $1`,
+          [parent.briefId]
+        );
+
+        if (queryResult.rowCount === 0) {
+          return [];
+        } else {
+          return queryResult.rows;
+        }
       } catch (err) {
         throw new Error(err);
       }

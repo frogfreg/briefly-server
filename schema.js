@@ -1,4 +1,3 @@
-// TODO: Add support for favorites
 const { gql } = require("apollo-server");
 
 const typeDefs = gql`
@@ -7,7 +6,7 @@ const typeDefs = gql`
     text: String!
     images: [String!]!
     author: User!
-    childBriefs: [String!]!
+    childBriefs: [Brief!]!
     parentBrief: Brief
     dateCreated: String!
     dateUpdated: String!
