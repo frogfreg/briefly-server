@@ -9,9 +9,10 @@ const typeDefs = gql`
     childBriefs: [Brief!]!
     parentBrief: Brief
     dateCreated: String!
-    dateUpdated: String!
+    dateModified: String!
     favoriteOf: [User!]!
     favoriteCount: Int!
+    deleted: Boolean!
   }
   type User {
     username: String!

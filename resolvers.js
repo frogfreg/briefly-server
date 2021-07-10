@@ -13,7 +13,7 @@ const resolvers = {
         console.trace();
       }
       try {
-        const queryResult = await db.query("SELECT * FROM briefs");
+        const queryResult = await db.query(`SELECT * FROM "briefsContent"`);
         return queryResult.rows;
       } catch (err) {
         throw new Error(err);
@@ -46,9 +46,11 @@ const resolvers = {
       }
     },
     brief: async (parent, { id }, context) => {
+      //TODO: Handle deleted brief
+
       try {
         const queryResult = await db.query(
-          `SELECT * FROM briefs WHERE "briefId" = $1`,
+          `SELECT * FROM "briefsContent" WHERE "briefId" = $1`,
           [id]
         );
 
@@ -85,8 +87,10 @@ const resolvers = {
       }
       const briefId = uuidv4();
       try {
+        await db.query("INSERT INTO briefs VALUES($1)", [briefId]);
+
         const queryResult = await db.query(
-          "INSERT INTO briefs VALUES($1, $2, $3)",
+          `INSERT INTO "briefsContent" VALUES($1, $2, $3)`,
           [briefId, args.text, context.userId]
         );
         if (args.parent) {
@@ -119,7 +123,7 @@ const resolvers = {
         }
 
         const newBriefQuery = await db.query(
-          'SELECT * from briefs WHERE "briefId" = $1',
+          'SELECT * from "briefsContent" WHERE "briefId" = $1',
           [briefId]
         );
 
@@ -163,14 +167,26 @@ const resolvers = {
     },
     deleteBrief: async (parent, { id }, context) => {
       try {
+        await db.query(`DELETE FROM favorites WHERE "briefId" = $1`, [id]);
+        await db.query(`DELETE FROM images WHERE "briefId" = $1`, [id]);
+
         const queryResult = await db.query(
-          'DELETE FROM briefs WHERE "briefId" = $1',
+          `SELECT "authorId" FROM "briefsContent" WHERE "briefId" = $1`,
           [id]
         );
 
         if (queryResult.rowCount === 0) {
-          return false;
+          throw new Error("This brief was not found");
         }
+
+        await db.query('DELETE FROM "briefsContent" WHERE "briefId" = $1', [
+          id,
+        ]);
+
+        await db.query(`INSERT INTO "deletedBriefs" VALUES($1, NOW(), $2)`, [
+          id,
+          queryResult.rows[0].authorId,
+        ]);
 
         return true;
       } catch (err) {
@@ -317,12 +333,15 @@ const resolvers = {
         throw new Error(err);
       }
     },
+    deleted: async (parent, args, context) => {
+      //return boolean value according to table
+    },
   },
   User: {
     briefs: async (parent, args, context) => {
       try {
         const queryResult = await db.query(
-          `SELECT * FROM briefs WHERE "authorId" = $1`,
+          `SELECT * FROM "briefsContent" WHERE "authorId" = $1`,
           [parent.userId]
         );
 
@@ -334,7 +353,7 @@ const resolvers = {
     favorites: async (parent, args, context) => {
       try {
         const queryResult = await db.query(
-          `SELECT briefs.* FROM briefs JOIN favorites ON favorites."briefId" = briefs."briefId" WHERE favorites."userId" = $1`,
+          `SELECT briefs.* FROM "briefsContent" AS briefs JOIN favorites ON favorites."briefId" = briefs."briefId" WHERE favorites."userId" = $1`,
           [parent.userId]
         );
 

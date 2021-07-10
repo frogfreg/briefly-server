@@ -11,8 +11,10 @@ const server = new ApolloServer({
     let token = {};
     if (req.headers && req.headers.authorization) {
       try {
+        const regex = /bearer\s+/i;
+
         token = jwt.verify(
-          req.headers.authorization.replace("Bearer ", ""),
+          req.headers.authorization.replace(regex, ""),
           process.env.SECRET_KEY || "thisisasecret"
         );
       } catch (err) {
