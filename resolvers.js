@@ -1,5 +1,3 @@
-//TODO: Update deleteBrief mutation to deal with deleted parents
-
 const db = require("./database/db.js");
 const { v4: uuidv4 } = require("uuid");
 const bcrypt = require("bcrypt");
@@ -8,13 +6,24 @@ const jwt = require("jsonwebtoken");
 const resolvers = {
   Query: {
     briefs: async (parent, args, context) => {
+      //TODO: handle args to only show non deleted briefs
       if (args.page) {
         console.log("Page was given");
         console.trace();
       }
       try {
+        const deletedBriefsQuery = await db.query(
+          `SELECT * FROM "deletedBriefs"`
+        );
+
+        const deletedBriefs = deletedBriefsQuery.rows.map((row) => {
+          const brief = { ...row };
+          brief.text = null;
+          return brief;
+        });
+
         const queryResult = await db.query(`SELECT * FROM "briefsContent"`);
-        return queryResult.rows;
+        return [...queryResult.rows, ...deletedBriefs];
       } catch (err) {
         throw new Error(err);
       }
@@ -28,8 +37,6 @@ const resolvers = {
       }
     },
     loggedInUser: async (parent, args, context) => {
-      //TODO: extract userId from jwt, validate in db and return user info
-
       if (!context.userId) {
         throw new Error("You must be logged in to see this info!");
       }
@@ -46,8 +53,7 @@ const resolvers = {
       }
     },
     brief: async (parent, { id }, context) => {
-      //TODO: Handle deleted brief
-
+      //TODO: Handle deleted briefs
       try {
         const queryResult = await db.query(
           `SELECT * FROM "briefsContent" WHERE "briefId" = $1`,
@@ -85,6 +91,20 @@ const resolvers = {
       if (!context.userId) {
         throw new Error("You must be logged in to create a new Brief!");
       }
+
+      if (args.parent) {
+        const deletedCheckQuery = await db.query(
+          `SELECT "briefId" FROM "deletedBriefs" WHERE "briefId" = $1`,
+          [args.parent]
+        );
+
+        if (deletedCheckQuery.rowCount !== 0) {
+          throw new Error(
+            "You cannot use a deleted brief as a parent for a new brief"
+          );
+        }
+      }
+
       const briefId = uuidv4();
       try {
         await db.query("INSERT INTO briefs VALUES($1)", [briefId]);
@@ -140,7 +160,7 @@ const resolvers = {
         password,
         picture = null,
         birthdate = null,
-        showAge = null,
+        showAge = false,
       }
     ) => {
       //TODO: deal with ages, test user creation, add user edition mutation
@@ -166,12 +186,25 @@ const resolvers = {
       }
     },
     deleteBrief: async (parent, { id }, context) => {
+      if (!context.userId) {
+        throw new Error("You must be logged in to delete a brief");
+      }
+
       try {
+        const userCheckQuery = await db.query(
+          `SELECT * FROM "briefsContent" WHERE "authorId" = $1 AND "briefId" = $2`,
+          [context.userId, id]
+        );
+
+        if (userCheckQuery.rowCount === 0) {
+          throw new Error("You do not have permission to delete this brief");
+        }
+
         await db.query(`DELETE FROM favorites WHERE "briefId" = $1`, [id]);
         await db.query(`DELETE FROM images WHERE "briefId" = $1`, [id]);
 
         const queryResult = await db.query(
-          `SELECT "authorId" FROM "briefsContent" WHERE "briefId" = $1`,
+          `SELECT "authorId", "dateCreated" FROM "briefsContent" WHERE "briefId" = $1`,
           [id]
         );
 
@@ -179,14 +212,22 @@ const resolvers = {
           throw new Error("This brief was not found");
         }
 
+        const dateCreated = new Date(queryResult.rows[0].dateCreated);
+
         await db.query('DELETE FROM "briefsContent" WHERE "briefId" = $1', [
           id,
         ]);
 
-        await db.query(`INSERT INTO "deletedBriefs" VALUES($1, NOW(), $2)`, [
-          id,
-          queryResult.rows[0].authorId,
-        ]);
+        const regexTZ = /[TZ]/g;
+
+        await db.query(
+          `INSERT INTO "deletedBriefs" VALUES($1, NOW(), $2, $3)`,
+          [
+            id,
+            queryResult.rows[0].authorId,
+            `${dateCreated.toISOString().replace(regexTZ, " ").trim()}+00`,
+          ]
+        );
 
         return true;
       } catch (err) {
@@ -227,6 +268,14 @@ const resolvers = {
         throw new Error("You must be logged in to fav a brief");
       }
       try {
+        const checkIfDeletedQuery = await db.query(
+          `SELECT "briefId" FROM "deletedBriefs" WHERE "briefId" = $1`,
+          [id]
+        );
+        if (checkIfDeletedQuery.rowCount !== 0) {
+          throw new Error("A deleted brief cannot be favd");
+        }
+
         const queryResult = await db.query(
           `SELECT * FROM favorites WHERE "briefId" = $1 AND "userId" = $2`,
           [id, context.userId]
@@ -334,7 +383,20 @@ const resolvers = {
       }
     },
     deleted: async (parent, args, context) => {
-      //return boolean value according to table
+      try {
+        const queryResult = await db.query(
+          `SELECT * FROM "deletedBriefs" WHERE "briefId" = $1`,
+          [parent.briefId]
+        );
+
+        if (queryResult.rowCount === 0) {
+          return false;
+        } else {
+          return true;
+        }
+      } catch (err) {
+        throw new Error(err);
+      }
     },
   },
   User: {

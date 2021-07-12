@@ -1,15 +1,16 @@
+//TODO: Enable subscribers and subscriptions
+
 const { gql } = require("apollo-server");
 
 const typeDefs = gql`
   type Brief {
     briefId: ID!
-    text: String!
+    text: String
     images: [String!]!
     author: User!
     childBriefs: [Brief!]!
     parentBrief: Brief
     dateCreated: String!
-    dateModified: String!
     favoriteOf: [User!]!
     favoriteCount: Int!
     deleted: Boolean!
