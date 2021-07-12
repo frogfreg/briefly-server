@@ -1,5 +1,3 @@
-//TODO: Enable subscribers and subscriptions
-
 const { gql } = require("apollo-server");
 
 const typeDefs = gql`
@@ -23,6 +21,8 @@ const typeDefs = gql`
     briefs: [Brief!]!
     signupDate: String!
     favorites: [Brief!]!
+    followers: [User!]!
+    following: [User!]!
   }
   type Query {
     briefs: [Brief!]!
