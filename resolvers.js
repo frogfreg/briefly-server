@@ -1,5 +1,3 @@
-//TODO: Add resolvers for follows
-
 const db = require("./database/db.js");
 const { v4: uuidv4 } = require("uuid");
 const bcrypt = require("bcrypt");
@@ -472,6 +470,18 @@ const resolvers = {
       try {
         const queryResult = await db.query(
           `SELECT users.* FROM followers JOIN users ON users."userId" = followers."userId" WHERE followers.follower = $1`,
+          [parent.userId]
+        );
+
+        return queryResult.rows;
+      } catch (err) {
+        throw new Error(err);
+      }
+    },
+    feed: async (parent, args, context) => {
+      try {
+        const queryResult = await db.query(
+          `SELECT "briefsContent".* FROM "briefsContent" JOIN followers ON "briefsContent"."authorId" = followers."userId" WHERE follower = $1`,
           [parent.userId]
         );
 

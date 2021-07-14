@@ -23,6 +23,7 @@ const typeDefs = gql`
     favorites: [Brief!]!
     followers: [User!]!
     following: [User!]!
+    feed: [Brief!]!
   }
   type Query {
     briefs: [Brief!]!
