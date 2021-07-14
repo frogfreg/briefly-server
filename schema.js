@@ -44,6 +44,7 @@ const typeDefs = gql`
     ): String!
     signIn(username: String, email: String, password: String!): String!
     toggleFavorite(id: ID!): Boolean!
+    toggleFollow(id: ID!): Boolean!
   }
 `;
 

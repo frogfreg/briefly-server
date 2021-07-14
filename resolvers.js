@@ -300,6 +300,36 @@ const resolvers = {
         throw new Error(err);
       }
     },
+    toggleFollow: async (parent, { id }, context) => {
+      if (!context.userId) {
+        throw new Error("You must be logged in to follow a user");
+      }
+      if (context.userId === id) {
+        throw new Error("You cannot follow yourself!");
+      }
+      try {
+        const checkIfFollowingQuery = await db.query(
+          `SELECT * FROM followers WHERE "userId" = $1 AND follower = $2`,
+          [id, context.userId]
+        );
+
+        if (checkIfFollowingQuery.rowCount === 0) {
+          await db.query(`INSERT INTO followers VALUES($1, $2)`, [
+            id,
+            context.userId,
+          ]);
+          return true;
+        } else {
+          await db.query(
+            `DELETE FROM followers WHERE "userId" = $1 AND follower = $2`,
+            [id, context.userId]
+          );
+          return false;
+        }
+      } catch (err) {
+        throw new Error(err);
+      }
+    },
   },
   Brief: {
     author: async (parent, args, context) => {
@@ -418,6 +448,30 @@ const resolvers = {
       try {
         const queryResult = await db.query(
           `SELECT briefs.* FROM "briefsContent" AS briefs JOIN favorites ON favorites."briefId" = briefs."briefId" WHERE favorites."userId" = $1`,
+          [parent.userId]
+        );
+
+        return queryResult.rows;
+      } catch (err) {
+        throw new Error(err);
+      }
+    },
+    followers: async (parent, args, context) => {
+      try {
+        const queryResult = await db.query(
+          `SELECT users.* FROM followers JOIN users ON users."userId" = followers.follower WHERE followers."userId" = $1`,
+          [parent.userId]
+        );
+
+        return queryResult.rows;
+      } catch (err) {
+        throw new Error(err);
+      }
+    },
+    following: async (parent, args, context) => {
+      try {
+        const queryResult = await db.query(
+          `SELECT users.* FROM followers JOIN users ON users."userId" = followers."userId" WHERE followers.follower = $1`,
           [parent.userId]
         );
 
