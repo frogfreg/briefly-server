@@ -22,8 +22,8 @@ const server = new ApolloServer({
         throw new Error(err);
       }
     } else {
-      // I do not currently remember why i do this. Will probably change in the future.
-      token.userId = "1";
+      
+      token.userId = null;
     }
 
     return { userId: token.userId };
