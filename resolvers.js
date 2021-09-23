@@ -85,6 +85,17 @@ const resolvers = {
         throw new Error(err);
       }
     },
+    userSearch: async (parent, { username }, context) => {
+      try {
+        const queryResult = await db.query(
+          `SELECT * FROM users WHERE username LIKE $1`,
+          [`%${username}%`]
+        );
+        return queryResult.rows;
+      } catch (err) {
+        throw new Error(err);
+      }
+    },
   },
   Mutation: {
     newBrief: async (parent, args, context) => {

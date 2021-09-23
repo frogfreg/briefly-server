@@ -31,6 +31,7 @@ const typeDefs = gql`
     users: [User!]!
     user(id: ID!): User!
     loggedInUser: User!
+    userSearch(username: String!): [User!]!
   }
   type Mutation {
     newBrief(text: String!, images: [String!], parent: ID): Brief!
